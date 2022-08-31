@@ -1,0 +1,34 @@
+version: '3.7'
+services:
+  stocks:
+    image: 211.183.3.103:9999/public-repo/stocks:1.1
+    deploy:
+      replicas: 2
+      placement:
+        constraints: [node.role == worker]
+      restart_policy:
+        condition: on-failure
+        max_attempts: 2
+    environment:
+      SERVICE_PORTS: 80
+    networks:
+      - stocks
+  proxy:
+    image: dockercloud/haproxy
+    depends_on:
+      - stocks
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports: # -p option, attached to ingress network
+      - "8001:80"
+    networks: # backend network -> nginx containers
+      - stocks
+    deploy:
+      mode: global
+      placement:
+        constraints: [node.role == manager]
+        # constraints: [node.labels.service == stocks]
+networks:
+  stocks:
+    external: true                                                                       
+

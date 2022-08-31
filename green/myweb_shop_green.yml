@@ -1,0 +1,33 @@
+version: '3.7'
+services:
+  shop:
+    image: 192.168.0.101:5000/myweb:shop_green2
+    deploy:
+      replicas: 5
+      placement:
+        constraints: [node.role == manager]
+      restart_policy:
+        condition: on-failure
+        max_attempts: 2
+    environment:
+      SERVICE_PORTS: 80
+    networks:
+      - shop
+  proxy:
+    image: dockercloud/haproxy
+    depends_on:
+      - shop
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports: # -p option, attached to ingress network
+      - "8126:80"
+    networks: # backend network -> nginx containers
+      - shop
+    deploy:
+      mode: global
+      placement:
+        constraints: [node.labels.service == shop]
+networks:
+  shop:
+    external: true                                                                       
+
