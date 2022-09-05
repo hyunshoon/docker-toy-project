@@ -3,26 +3,31 @@
 # +--------------------------------------------------------------------------------------------------+
 # | git clone project                                                                                |
 # +--------------------------------------------------------------------------------------------------+
-git clone $1 /remote/project > /dev/null 2>&1
-project_name=$(echo $1 | cut -d '/' -f5 | cut -d '.' -f1)
+
+git_dir="/home/rapa/docker_cluster"
+git_repo="https://github.com/hyunshoon/docker-toy-project.git"
+git pull $git_repo $git_dir > /dev/null 2>&1
+project_name=$(echo $git_repo | cut -d '/' -f5 | cut -d '.' -f1)
 
 i=0
 dir_list=()
-dir_num=$(ls -l /remote/project | grep "^d" | gawk '{print $9}' | wc -l)
+dir_num=$(ls -l $git_dir | grep "^d" | gawk '{print $9}' | wc -l)
 while [ $i -lt $dir_num ]
 do
-  dir_list+=("$(ls -l /remote/project | grep "^d" | gawk '{print $9}' | sed -n $((i+1))p)")
+  dir_list+=("$(ls -l $git_dir | grep "^d" | gawk '{print $9}' | sed -n $((i+1))p)")
   i=$((i+1))
 done
 
-PS3="Select dir: "
-select chose in ${dir_list[@]}
+PS3="Select update service: "
+select service in ${dir_list[@]}
 do
-  dir=$chose
+  dir=$service
   break
 done
 
-index=$(ls /remote/project/${dir} | grep "index.html")
+echo "check point"
+
+index=$(ls ${git_dir}/${dir} | grep "index.html")
 
 if [ "$index" != "index.html" ]
 then
@@ -34,33 +39,23 @@ fi
 # +--------------------------------------------------------------------------------------------------+
 # | change dockerhub image                                                                           |
 # +--------------------------------------------------------------------------------------------------+
-#docker build -t ${project_name}:${dir} -f /remote/project/Dockerfile > /dev/null 2>&1
-#docker tag ${project_name}:${dir} modo000127/${project_name}:${dir} > /dev/null 2 >&1
-#docker push modo000127/${project_name}:${dir} > /dev/null 2>&1
+docker build -t ${dir}:test ${git_dir}/${dir}/ > /dev/null 2>&1
+docker tag ${dir}:test 211.183.3.103:9999/public-repo/${dir}:test > /dev/null 2 >&1
+echo "${dir}:1.5 211.183.3.103:9999/public-repo/${dir}:1.5"
+docker push 211.183.3.103:9999/public-repo/${dir}:1.5 > /dev/null 2 >&1
 
-docker build -f /remote/Project/Dockerfile -t test:manager . > /dev/null 2>&1
-docker tag test:manager modo000127/test:manager # > /dev/null 2 >&1
-docker push modo000127/test:manager #> /dev/null 2>&1
 
 # +--------------------------------------------------------------------------------------------------+
 # | stack deploy                                                                                     |
 # +--------------------------------------------------------------------------------------------------+
 
-while :
-do
-  echo "\n==============================="
-  echo -n " network?"
-  read network_name
+echo "\n==============================="
+echo -n "What is service name?"
+read service_name
 
-  check_network=$(docker network ls -f NAME=${network_name} | tail -1 | gawk '{print $2}')
-  if [ "${check_network}" == "${network_name}" ]
-  then
-    break
-  fi
-done
 
 #docker stack rm $network_name
-docker stack deploy -c /remote/project/${dir}/${network_name}.yml $network_name
+docker stack deploy -c ${git_dir}/${dir}/${service_name}.yml $service_name
 
 # +--------------------------------------------------------------------------------------------------+
 # | change project file                                                                              |
